@@ -1,0 +1,240 @@
+
+1. Create ECR Repository
+
+AWS Console → ECR → Repositories → Create repository
+
+We used:
+
+Plain Text
+Repository type: Private
+Repository name: harish-ecs-demo
+
+Create the repository.
+
+Purpose
+
+ECR = Elastic Container Registry
+
+It stores Docker/container images.
+
+We didn't actually use our ECR image in today's Nginx deployment. We created the repository so we can use it in the next exercise.
+------------------------------------------------
+2. Create ECS Cluster
+
+AWS Console → ECS → Clusters → Create cluster
+
+Cluster name:
+
+Plain Text
+harish-ecs-cluster
+
+Use AWS Fargate/serverless infrastructure.
+
+No EC2 instance is required.
+
+Purpose
+
+The ECS cluster is the logical environment where ECS workloads are managed.
+----------------------------------------------------------
+3. Create Task Definition
+
+Go to:
+
+ECS → Task definitions → Create new task definition
+
+Task definition family:
+
+Plain Text
+harish-nginx-task
+
+Infrastructure:
+
+Plain Text
+AWS Fargate
+
+For a small practice workload:
+
+Plain Text
+CPU: 0.25 vCPU
+Memory: 0.5 GB
+Container configuration
+
+Container name:
+
+Plain Text
+nginx
+
+Image:
+
+Plain Text
+nginx:latest
+
+Container port:
+
+Plain Text
+80
+
+Protocol:
+
+Plain Text
+TCP
+
+Create the Task Definition.
+
+Purpose
+
+Think of a Task Definition as a blueprint.
+
+It tells ECS things such as:
+
+Plain Text
+Which image?
+Which port?
+How much CPU?
+How much memory?
+What logging?
+What IAM roles?
+----------------------------------------------------
+4. Create ECS Service
+
+Open:
+
+ECS → Clusters → harish-ecs-cluster
+
+Open the dropdown next to Create with Express Mode.
+
+Choose:
+
+Plain Text
+Create service
+
+We did not choose:
+
+Plain Text
+Run task
+Create daemon
+Create scheduled task
+====================================================
+5. Configure Fargate
+
+Configure the service approximately as:
+
+Plain Text
+Compute option: Launch type
+Launch type: FARGATE
+Platform version: LATEST
+
+Task definition:
+
+Plain Text
+harish-nginx-task
+
+Revision:
+
+Plain Text
+Latest
+
+Desired tasks:
+
+Plain Text
+1
+
+This means:
+
+ECS should maintain one running copy of the container task.
+========================================================================
+
+6. Configure Networking
+
+We selected the VPC/subnets and enabled:
+
+Plain Text
+Auto-assign public IP: ON
+
+The Fargate task therefore received its own ENI/network interface and public IP.
+
+The task used network mode:
+
+Plain Text
+awsvpc
+
+No Load Balancer was configured for this first exercise.
+=================================================================
+
+7. Configure Security Group
+
+This was an important troubleshooting step.
+
+The Security Group must permit the Nginx traffic:
+
+Plain Text
+Type: HTTP
+Protocol: TCP
+Port: 80
+Source: My IP
+
+For a temporary lab test, we can alternatively use:
+
+Plain Text
+Type: HTTP
+Protocol: TCP
+Port: 80
+Source: 0.0.0.0/0
+
+For regular use, restrict the source rather than leaving unnecessary public access.
+============================================================================================
+
+8. Create the Service
+
+After creating the service, go to:
+
+ECS → Cluster → Tasks
+
+We confirmed:
+
+Plain Text
+Task count: 1/1
+Last status: Running
+Desired status: Running
+Task definition: harish-nginx-task:1
+
+This confirmed that Fargate successfully started our Nginx container.
+==================================================================================
+
+9. Find Fargate Public IP
+
+Go to:
+
+Cluster → Tasks → click Task ID → Networking
+
+We found:
+
+Plain Text
+Network mode: awsvpc
+Private IP: 172.31.28.251
+Public IP: 3.26.180.123
+ 
+
+Note: Public IP addresses can change after task replacement/redeployment, so don't treat the IP above as permanent.
+==========================================================================================
+
+10. Test the Application
+
+Open:
+
+Plain Text
+http://<FARGATE-PUBLIC-IP>
+
+Example from our practice:
+
+Plain Text
+http://3.26.180.123
+
+We initially couldn't access the page.
+
+We checked the Security Group / port 80 access, corrected the network access, and then Nginx became accessible. ✅
+
+Expected page:
+
+Plain Text
+Welcome to nginx!
